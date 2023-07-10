@@ -653,6 +653,8 @@ def find_tests(binaries, additional_args, options, times):
       test_command = command + ['--gtest_filter=' + test_name]
       if (test_count - options.shard_index) % options.shard_count == 0:
         for execution_number in range(options.repeat):
+          if options.gtest_output and options.gtest_output.startswith("xml:"):
+            test_command += ['--gtest_output=xml:' +os.path.join(options.output_dir, f"{test_binary}-{test_name}-{execution_number+1}.xml")]
           tasks.append(
               Task(test_binary, test_name, test_command, execution_number + 1,
                    last_execution_time, options.output_dir))
@@ -761,6 +763,10 @@ def default_options_parser():
                     type='string',
                     default='',
                     help='test filter')
+  parser.add_option('--gtest_output',
+                    type='string',
+                    default=None,
+                    help='output file of test results')
   parser.add_option('--gtest_also_run_disabled_tests',
                     action='store_true',
                     default=False,
