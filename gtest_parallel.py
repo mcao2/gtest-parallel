@@ -654,7 +654,7 @@ def find_tests(binaries, additional_args, options, times):
       if (test_count - options.shard_index) % options.shard_count == 0:
         for execution_number in range(options.repeat):
           if options.gtest_output and options.gtest_output.startswith("xml:"):
-            test_command += ['--gtest_output=xml:' +os.path.join(options.output_dir, f"{test_binary}-{test_name}-{execution_number+1}.xml")]
+            test_command += ['--gtest_output=xml:' + f"{options.output_dir}/{os.path.basename(test_binary)}-{test_name}-{execution_number+1}.xml"]
           tasks.append(
               Task(test_binary, test_name, test_command, execution_number + 1,
                    last_execution_time, options.output_dir))
@@ -820,8 +820,7 @@ def main():
   (options, binaries) = parser.parse_args()
 
   if (options.output_dir is not None and not os.path.isdir(options.output_dir)):
-    parser.error('--output_dir value must be an existing directory, '
-                 'current value is "%s"' % options.output_dir)
+    os.makedirs(options.output_dir, exist_ok=True)
 
   # Append gtest-parallel-logs to log output, this is to avoid deleting user
   # data if an user passes a directory where files are already present. If a
@@ -901,6 +900,14 @@ def main():
   times.write_to_file(save_file)
   if test_results:
     test_results.dump_to_file_and_close()
+
+  if options.gtest_output and options.gtest_output.startswith("xml:"):
+    gtest_output_file = options.gtest_output.split(":")[1]
+    try:
+      print(options.output_dir)
+      print(subprocess.check_output(['jrm', gtest_output_file, f"{options.output_dir}/*.xml"], stderr=subprocess.STDOUT))
+    except subprocess.CalledProcessError as e:
+      print(f"Command failed with return code {e.returncode}: {e.output}")
 
   if sigint_handler.got_sigint():
     return -signal.SIGINT
